@@ -1,29 +1,58 @@
-import { useQuery } from 'react-query';
+import { useState } from 'react';
+import { usePaginatedQuery } from 'react-query';
 
 import Planet from './Planet';
 
-const fetchPlanets = async () => {
-  const response = await fetch(`http://swapi.dev/api/planets/`);
-  return response.json();
+const fetchPlanets = async (_, page) => {
+  const res = await fetch(`http://swapi.dev/api/planets/?page=${page}`);
+  return res.json();
 };
 
 const Planets = () => {
-  const { data, isError, isLoading, isSuccess } = useQuery(
-    'planets',
+  const [page, setPage] = useState(1);
+  const { resolvedData, latestData, status } = usePaginatedQuery(
+    ['planets', page],
     fetchPlanets
   );
+
+  // const { data, status } = useQuery(
+  //   ['planets', 'hello, ninjas', page],
+  //   fetchPlanets
+  // );
 
   return (
     <div>
       <h2>Planets</h2>
-      {isLoading && <div>Loading data...</div>}
-      {isError && <div>Error fethcing data</div>}
-      {isSuccess && (
-        <div>
-          {data.results.map((planet) => (
-            <Planet key={planet.name} planet={planet} />
-          ))}
-        </div>
+
+      {status === 'loading' && <div>Loading data</div>}
+
+      {status === 'error' && <div>Error fetching data</div>}
+
+      {status === 'success' && (
+        <>
+          <button
+            onClick={() => setPage((old) => Math.max(old - 1, 1))}
+            disabled={page === 1}
+          >
+            Previous Page
+          </button>
+          <span>{page}</span>
+          <button
+            onClick={() =>
+              setPage((old) =>
+                !latestData || !latestData.next ? old : old + 1
+              )
+            }
+            disabled={!latestData || !latestData.next}
+          >
+            Next page
+          </button>
+          <div>
+            {resolvedData.results.map((planet) => (
+              <Planet key={planet.name} planet={planet} />
+            ))}
+          </div>
+        </>
       )}
     </div>
   );
